@@ -6,8 +6,12 @@
 #   input_1                     description
 #
 # Optional input:
-#   input_2                     description
-#   input_3                     description
+#   input_2                     N/A
+#   input_3                     N/A
+#
+# Output
+#   GDS_substance               .txt file that lists all GDSs from GEO that have samples that have been exposed
+#                               to "agents" (i.e. Drugs/Substances) and the corresponding "agents"
 #
 # Written by Douglas Arneson 2016
 #
@@ -84,6 +88,7 @@ getGDSs <- function(msea) {
     cat(paste("\nYou already have downloaded all necessary GEO GDS SOFT files, proceeding to the next step\n"))
   }
   
+  #968 were obtained
   GDS_substance <- paste(pipeline_path,"Resources/GDS_with_substance.txt",sep="")
   
   if (file.exists(GDS_substance)){
@@ -124,4 +129,56 @@ getGDSs <- function(msea) {
       }
     }
   }
+  
+  #GDS_substance = read.table(GDS_substance,header = FALSE, sep = "\t", stringsAsFactors = FALSE)
+
+  #return the path location of the GDS files and their associated substances
+  return(GDS_substance)  
 }
+
+#
+# Take input substances which are connected to GDSs from GEO
+# write a java file which will be used to connect with the UMLS
+# API 
+#
+# Input:
+#   GDS_substances                    description
+#
+# Output:
+#   output_1                          .txt file that lists all GDSs from GEO that have samples that have been exposed
+#                                     to "agents" (i.e. Drugs/Substances) and the corresponding "agents"
+#
+# Written by Douglas Arneson 2016
+#
+writeUMLSjava <- function(GDS_substances) {
+  java_path <- "/Users/darneson/Desktop/Box\ Sync/Doug_Macbook_Air/Yang_Lab/PharmOmics_Pipeline/Resources/UMLS/utsapi2_0/"
+  java_write <- "../Resources/UMLS/utsapi2_0/GDS_UMLS.java"
+  GDS_substances <- paste(pipeline_path,"Resources/GDS_with_substance.txt",sep="")
+  all_substances = read.table(GDS_substances,header = FALSE, sep = "\t", stringsAsFactors = FALSE, fill=TRUE, col.names=paste0('V', seq_len(20)))
+  
+  #Generate a java file that will be used to interact with the UMLS API. First get the first half of the Java file which is obtained from a 
+  #flat text file
+  system('cat ../Resources/UMLS/utsapi2_0/substance_UMLS_1.txt > "../Resources/UMLS/utsapi2_0/GDS_UMLS.java"')
+  
+  #Add all the GDSs and substances of interest to our Java file (this is what we will query the UMLS with)
+  for (i in 1:nrow(all_substances)){
+    write(paste('{"', all_substances[i,1], '"'  ,sep=""),file=java_write,append=TRUE)
+    for (j in 2:length(all_substances[i,])){
+      if (all_substances[i,j] != "" && !is.na(all_substances[i,j])){
+        write(paste(', "',all_substances[i,j],'"', sep=""),file=java_write,append=TRUE)
+      }
+    }
+    write(paste("}"),file=java_write,append=TRUE)
+    if (i < nrow(all_substances)){
+      write(paste(",\n"),file=java_write,append=TRUE)
+    }
+  }
+  write(paste(" };"),file=java_write,append=TRUE)
+  
+  system('cat ../Resources/UMLS/utsapi2_0/substance_UMLS_2.txt >> "../Resources/UMLS/utsapi2_0/GDS_UMLS.java"')
+  
+  return(NULL)
+
+}
+
+  
